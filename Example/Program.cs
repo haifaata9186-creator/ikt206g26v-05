@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -17,12 +17,18 @@ builder.Services.AddControllersWithViews();
 var app = builder.Build();
 
 // Call the database initializer
-using (var services = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using var services = app.Services.CreateScope();
     var db = services.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     ApplicationDbInitializer.Initialize(db);
 }
-
+else
+{
+    using var services = app.Services.CreateScope();
+    var db = services.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
